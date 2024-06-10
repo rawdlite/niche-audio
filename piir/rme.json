@@ -23,8 +23,13 @@
     "carrier": 38000
   },
   "keys": {
+    "power": "20",
     "volup": "22",
     "voldown": "21",
-    "power": "20"
+    "vol": "2E",
+    "left": "33",
+    "right": "34",
+    "eq": "2C",
+    "sel": "35"
   }
 }
