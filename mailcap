@@ -1,0 +1,7 @@
+text/*; batcat %s; edit=vim %s
+text/plain; less %s;
+text/*; more %s;
+application/x-sh;batcat %s; edit=vim %s; 
+audio/mpeg; eyeD3 %s; edit=beet edit %s; print=trmpv %s;
+audio/flac; metaflac --list --block-number=2 %s; edit=beet edit %s; print=trmpv %s;
+audio/mpegurl; batcat %s; edit=vim %s; print=trmpv %s;

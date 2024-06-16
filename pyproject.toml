@@ -1,0 +1,17 @@
+[tool.poetry]
+name = "nicheaudio"
+version = "0.1.0"
+description = ""
+authors = ["rawdlite <rawdlite@gmail.com>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.11"
+ShellyPy = "^0.3.0"
+PiIR = "^0.2.5"
+pigpio = "^1.78"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

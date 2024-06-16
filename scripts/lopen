@@ -1,0 +1,2 @@
+#view links with run-mailcap
+run-mailcap-rs  $(xdg-mime query filetype $1):$1

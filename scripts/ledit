@@ -1,0 +1,2 @@
+#edit links with run-mailcap
+run-mailcap-rs --action=edit $(xdg-mime query filetype $1):$1
