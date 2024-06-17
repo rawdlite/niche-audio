@@ -1,0 +1,64 @@
+"set statusline+=%3{codeium#GetStatusString()}
+set statusline=%<%f\ %h%m%r%{codeium#GetStatusString()}%=%-14.(%l,%c%V%)\ %P
+" Don't try to be vi compatible
+set nocompatible
+
+" Helps force plugins to load correctly when it is turned back on below
+filetype off
+
+" Turn on syntax highlighting
+syntax on
+
+" For plugins to load correctly
+filetype plugin indent on
+
+" Turn off modelines
+set modelines=0
+
+" Turn on line numbers
+set number
+
+" highlight current line
+set cursorline
+
+" highlight matching [{()}]
+set showmatch
+
+set tabstop=4
+set softtabstop=4
+" set shiftwidth=4
+" set textwidth=79
+set wrap
+set expandtab
+set autoindent
+set fileformat=unix
+set encoding=utf-8
+set ruler
+
+set visualbell
+let mapleader = ","
+" Allow hidden buffers
+set hidden
+
+" Rendering
+set ttyfast
+
+" Status bar
+set laststatus=2
+
+" Last line
+set showmode
+set showcmd
+
+" Visualize tabs and newlines
+set listchars=tab:▸\ ,eol:¬
+" Uncomment this to enable by default:
+set list " To enable by default
+" Or use your leader key + l to toggle on/off
+map <leader>l :set list!<CR> " Toggle tabs and EOL
+
+" Color scheme
+syntax enable
+set background=dark
+let g:solarized_termcolors=256
+let g:solarized_termtrans=1

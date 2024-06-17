@@ -249,4 +249,4 @@ cmd paste-override ${{
 
 map p
 map pp paste
-mhiap po paste-overwrite
+map po paste-overwrite
