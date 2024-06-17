@@ -1,4 +1,4 @@
-!/usr/bin/python3
+#!/usr/bin/env python3
 
 SOUNDCARD_DEVICE_FILE = "/proc/asound/sndallodigione/pcm0p/sub0/status" # Path of souncard status file
 SHUTDOWN_TIMEOUT = 15 # Delay before amplifier power down after soundcard released
