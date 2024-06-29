@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 import random
 URL = {
+        'Radio1':  'http://opml.radiotime.com/Tune.ashx?id=s25111&formats=aac,ogg,mp3&partnerId=16&serial=a44d9baf7190744ec4fa880f24a9fdba',
         'Krautrock': 'http://open.qobuz.com/playlist/1208967',
-        'radio1':  'http://opml.radiotime.com/Tune.ashx?id=s25111&formats=aac,ogg,mp3&partnerId=16&serial=a44d9baf7190744ec4fa880f24a9fdba',
-        'dance': 'http://open.qobuz.com/playlist/2722317',
+        'Dance': 'http://open.qobuz.com/playlist/2722317',
         'Electro': 'http://open.qobuz.com/playlist/2561228',
         'Ambient': 'http://open.qobuz.com/playlist/21001567',
         'Blues': [

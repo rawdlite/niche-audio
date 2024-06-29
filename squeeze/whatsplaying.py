@@ -2,7 +2,7 @@
 from pysqueezebox import Server, Player
 import aiohttp
 import asyncio
-SERVER = '192.168.178.4' # ip address of Logitech Media Server
+SERVER = 'dietpi5.fritz.box' # ip address of Logitech Media Server
 player_name = 'Moode'
 
 async def main():
