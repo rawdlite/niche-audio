@@ -2,6 +2,7 @@
 from pysqueezebox import Server, Player
 import aiohttp
 import asyncio
+import piir
 from pigpio_encoder.rotary import Rotary
 import time
 from luma.core.interface.serial import i2c
@@ -10,16 +11,17 @@ from luma.oled.device import sh1106, ssd1306
 from PIL import ImageFont, ImageDraw, Image
 from urls.LMSURL import URL, Saraswati
 
-SERVER = 'dietpi5.fritz.box' # ip address of Logitech Media Server
+SERVER = '192.168.178.79' # ip address of Logitech Media Server
 PLAYERNAME = 'Moode'
 TIMEOUT = 120
 CHOICES = list(URL.keys())
 LASTCHOICE = 0
 # initialise display
 serial = i2c(port=1, address=0x3C)
-device = ssd1306(serial)
+device = sh1106(serial)
 oled_font = ImageFont.truetype('DejaVuSans.ttf', 20)
 runtime = 0
+remote = piir.Remote('/root/src/niche-audio/piir/rme.json', 18)
 
 my_rotary = Rotary(
     clk_gpio=21,
@@ -89,10 +91,15 @@ def display_choice(counter):
 
 async def play_choice(counter):
     url = sara.get_url(CHOICES[counter])
+    remote.send('power')
     print(f"url: {url}")
     async with aiohttp.ClientSession() as session:
         lms = Server(session, SERVER)
-        print("got server session")
+        if lms:
+            print("got server session")
+        else:
+            print(f"failed to get session for {SERVER}")
+            return
         player = await lms.async_get_player(name=PLAYERNAME)
         if not player:
             print("failed to get player")

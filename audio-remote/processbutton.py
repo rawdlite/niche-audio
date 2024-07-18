@@ -2,16 +2,18 @@
 from pysqueezebox import Server, Player
 import aiohttp
 import asyncio
+import argparse
 import time
 import random
 import subprocess
+import piir
 from gpiozero import LED, PWMLED, Button
 from gpiozero.pins.pigpio import PiGPIOFactory
 from signal import pause
 import subprocess
 from urls.LMSURL import URL, Saraswati
 factory = PiGPIOFactory()
-DEBUG = True
+DEBUG = False
 #led_yellow = PWMLED(12, pin_factory=factory)
 #led_green = PWMLED(5, frequency=800, pin_factory=factory)
 #led_red = PWMLED(6, pin_factory=factory)
@@ -24,19 +26,34 @@ button_1 = Button(13, pin_factory=factory)
 button_2 = Button(19, pin_factory=factory)
 button_3 = Button(26, pin_factory=factory)
 
-SERVER = 'dietpi5.fritz.box' # ip address of Logitech Media Server
+SERVER = '192.168.178.79' # ip address of Logitech Media Server
 player_name = 'Moode'
 TIMEOUT = 200
-
-
+remote = piir.Remote('/root/src/niche-audio/piir/rme.json', 18)
+parser = argparse.ArgumentParser(
+        prog='processbutton',
+        description='process button presses to control LMS',
+        epilog='uses gpiozero and pigpio')
+parser.add_argument('-v', '--verbose',
+                    action='store_true')
+args = parser.parse_args()
+if args.verbose:
+    DEBUG=True
 
 async def main():
     async with aiohttp.ClientSession() as session:
         lms = Server(session, SERVER)
+        if DEBUG and lms:
+            print("got server session")
         player = await lms.async_get_player(name=player_name)
         sara = Saraswati()
-        if DEBUG:
+        if DEBUG and player:
             print("got player")
+        if not player:
+            if DEBUG:
+                print(f"failed to get player {player_name} from {SERVER}")
+            time.sleep(0.5)
+            exit(1)
         await player.async_update()
         while True:
             if button_1.is_pressed:
@@ -45,7 +62,8 @@ async def main():
                 if DEBUG == True:
                     print(player.mode)
             if button_2.is_pressed:
-                await player.async_load_url(URL['radio1'], cmd="load")
+                await player.async_load_url(URL['Radio1'], cmd="load")
+                remote.send('power')
                 if DEBUG == True:
                     print("button 2")
             if button_3.is_pressed:
