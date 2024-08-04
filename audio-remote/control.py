@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+import tomllib
+from pathlib import Path
 from pysqueezebox import Server, Player
 import aiohttp
 import asyncio
@@ -11,9 +13,12 @@ from luma.oled.device import sh1106, ssd1306
 from PIL import ImageFont, ImageDraw, Image
 from urls.LMSURL import URL, Saraswati
 
-SERVER = '192.168.178.79' # ip address of Logitech Media Server
-PLAYERNAME = 'Moode'
-TIMEOUT = 120
+with open(Path.home() / ".config" / "niche-audio" / "config.toml", mode="rb") as fp:
+    settings = tomllib.load(fp)
+
+SERVER = settings['general']['server']
+PLAYERNAME = settings['general']['player']
+TIMEOUT = settings['rotary']['timeout']
 CHOICES = list(URL.keys())
 LASTCHOICE = 0
 # initialise display
@@ -24,9 +29,9 @@ runtime = 0
 remote = piir.Remote('/root/src/niche-audio/piir/rme.json', 18)
 
 my_rotary = Rotary(
-    clk_gpio=21,
-    dt_gpio=20,
-    sw_gpio=17
+    clk_gpio=settings['rotary']['clk_pin'],
+    dt_gpio=settings['rotary']['dt_pin'],
+    sw_gpio=settings['rotary']['sw_pin']
 )
 
 sara = Saraswati()

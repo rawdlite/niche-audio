@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+import tomllib
+from pathlib import Path
 from pysqueezebox import Server, Player
 import aiohttp
 import asyncio
@@ -14,21 +16,19 @@ import subprocess
 from urls.LMSURL import URL, Saraswati
 factory = PiGPIOFactory()
 DEBUG = False
-#led_yellow = PWMLED(12, pin_factory=factory)
-#led_green = PWMLED(5, frequency=800, pin_factory=factory)
-#led_red = PWMLED(6, pin_factory=factory)
 print("start")
-#led_green.blink()
-button_4 = Button(6, pin_factory=factory, bounce_time=0.1)
-#button_green = Button(20, pin_factory=factory, bounce_time=0.3)
-#button_white = Button(21, pin_factory=factory)
-button_1 = Button(13, pin_factory=factory)
-button_2 = Button(19, pin_factory=factory)
-button_3 = Button(26, pin_factory=factory)
 
-SERVER = '192.168.178.79' # ip address of Logitech Media Server
-player_name = 'Moode'
-TIMEOUT = 200
+with open(Path.home() / ".config" / "niche-audio" / "config.toml", mode="rb") as fp:
+    settings = tomllib.load(fp)
+
+SERVER = settings['general']['server']
+PLAYERNAME = settings['general']['player']
+TIMEOUT = settings['button']['timeout']
+button_1 = Button(settings['button']['button_1'], pin_factory=factory, bounce_time=0.1)
+button_2 = Button(settings['button']['button_2'], pin_factory=factory)
+button_3 = Button(settings['button']['button_3'], pin_factory=factory)
+button_4 = Button(settings['button']['button_4'], pin_factory=factory)
+
 remote = piir.Remote('/root/src/niche-audio/piir/rme.json', 18)
 parser = argparse.ArgumentParser(
         prog='processbutton',
@@ -45,7 +45,7 @@ async def main():
         lms = Server(session, SERVER)
         if DEBUG and lms:
             print("got server session")
-        player = await lms.async_get_player(name=player_name)
+        player = await lms.async_get_player(name=PLAYERNAME)
         sara = Saraswati()
         if DEBUG and player:
             print("got player")
