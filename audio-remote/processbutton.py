@@ -13,23 +13,38 @@ from gpiozero import LED, PWMLED, Button
 from gpiozero.pins.pigpio import PiGPIOFactory
 from signal import pause
 import subprocess
+import tomllib
 from urls.LMSURL import URL, Saraswati
 factory = PiGPIOFactory()
-DEBUG = False
-print("start")
+#print("start")
 
 with open(Path.home() / ".config" / "niche-audio" / "config.toml", mode="rb") as fp:
     settings = tomllib.load(fp)
 
+DEBUG = settings['general']['debug']
 SERVER = settings['general']['server']
+#print(SERVER)
 PLAYERNAME = settings['general']['player']
+#print(PLAYERNAME)
 TIMEOUT = settings['button']['timeout']
-button_1 = Button(settings['button']['button_1'], pin_factory=factory, bounce_time=0.1)
-button_2 = Button(settings['button']['button_2'], pin_factory=factory)
-button_3 = Button(settings['button']['button_3'], pin_factory=factory)
-button_4 = Button(settings['button']['button_4'], pin_factory=factory)
-
-remote = piir.Remote('/root/src/niche-audio/piir/rme.json', 18)
+button_green1 = Button(settings['button']['button_green1'], 
+                       pin_factory=factory, 
+                       bounce_time=0.1)
+button_yellow1 = Button(settings['button']['button_yellow1'],
+                        pin_factory=factory)
+button_blue1 = Button(settings['button']['button_blue1'],
+                      pin_factory=factory)
+button_red1 = Button(settings['button']['button_red1'],
+                     pin_factory=factory)
+button_green2 = Button(settings['button']['button_green2'], 
+                       pin_factory=factory, 
+                       bounce_time=0.1)
+button_yellow2 = Button(settings['button']['button_yellow2'],
+                        pin_factory=factory)
+button_blue2 = Button(settings['button']['button_blue2'],
+                      pin_factory=factory)
+button_red2 = Button(settings['button']['button_red2'],
+                     pin_factory=factory)
 parser = argparse.ArgumentParser(
         prog='processbutton',
         description='process button presses to control LMS',
@@ -39,6 +54,9 @@ parser.add_argument('-v', '--verbose',
 args = parser.parse_args()
 if args.verbose:
     DEBUG=True
+
+def show_button(button):
+    print(button.pin)
 
 async def main():
     async with aiohttp.ClientSession() as session:
@@ -56,20 +74,20 @@ async def main():
             exit(1)
         await player.async_update()
         while True:
-            if button_1.is_pressed:
+            if button_red1.is_pressed:
                 await player.async_toggle_pause()
                 await player.async_update()
                 if DEBUG == True:
+                    show_button(button_red1)
                     print(player.mode)
-            if button_2.is_pressed:
+            if button_green1.is_pressed:
                 await player.async_load_url(URL['Radio1'], cmd="load")
-                remote.send('power')
                 if DEBUG == True:
                     print("button 2")
-            if button_3.is_pressed:
-                await player.async_query("playlist","jump","2")
-            if button_4.is_pressed:
-                subprocess.run("/usr/local/bin/rme-power", shell=True)
+            if button_red2.is_pressed:
+                subprocess.run("/root/bin/rme-toggle-power.sh", shell=True)
+            if button_yellow2.is_pressed:
+                subprocess.run("/root/bin/amp-toggle-power.sh", shell=True)
                 #await player.async_load_url(URL['Electro'], cmd="load")
             time.sleep(0.1)
 

@@ -6,13 +6,10 @@ DEBUG = False
 #---------------------------8--------
 import os
 import time
-import ShellyPy
 import subprocess
 
-my_env = dict(os.environ, PIGPIO_ADDR="192.168.178.67")
-amp_switch_left = ShellyPy.Shelly("192.168.178.201")
-amp_switch_right = ShellyPy.Shelly("192.168.178.202")
 deviceFile = None
+lastIdle = None
 
 def Now():
     return int(time.time())
@@ -39,31 +36,18 @@ def CheckSoundcardStatus():
                 lastException = ex
     raise lastException # All attempt failed
 
-def CheckAmpStatus():
-    status_left = amp_switch_left.status()
-    status_right = amp_switch_right.status()
-    if DEBUG:
-        print(f"left: {status_left} right: {status_right}")
-    if status_left.get('relay') and status_right.get('relay') and status_left['relay']['json'] and status_right['relay']['json']:
-        return True
-    else:
-        return False
 
 def PowerOn():
-    res = subprocess.run("~/gpiozero/piir/power.py", shell=True, env=my_env)
+    res = subprocess.run("~/start.sh", shell=True, check=True)
     if DEBUG:
-        print(f"Power ON Amplifier: {res}")
-    amp_switch_left.relay(0, turn=True)
-    amp_switch_right.relay(0, turn=True)
+        print(f"Power ON: {res}")
 
 def PowerOff():
+    res = subprocess.run("~/stop.sh", shell=True, check=True)
     if DEBUG:
-        print("Power OFF Amplifier")
-    amp_switch_left.relay(0, turn=False)
-    amp_switch_right.relay(0, turn=False)
+        print(f"Power OFF: {res}")
 
-lastStatus = CheckAmpStatus()
-lastIdle = -1
+lastStatus = CheckSoundcardStatus()
 while True:
     try:
         nowStatus = CheckSoundcardStatus()
@@ -75,19 +59,19 @@ while True:
     if nowStatus:
         if not lastStatus:
             if DEBUG:
-                print("Soundcard Working")
+                print("Soundcard started")
             PowerOn()
             lastStatus = True
     else:
         if lastStatus:
             if DEBUG:
-                print("Soundcard Released")
+                print("Soundcard released")
             lastStatus = False
             lastIdle = Now()
-        elif (not lastStatus) and (lastIdle != -1):
+        elif (not lastStatus) and lastIdle:
             if Now() - lastIdle >= SHUTDOWN_TIMEOUT:
                 if DEBUG:
                     print("Timeout Reached")
                 PowerOff()
-                lastIdle = -1
-    time.sleep(0.2)
+                lastIdle = None
+    time.sleep(0.5)

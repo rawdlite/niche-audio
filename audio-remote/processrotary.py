@@ -18,6 +18,7 @@ with open(Path.home() / ".config" / "niche-audio" / "config.toml", mode="rb") as
 
 SERVER = settings['general']['server']
 PLAYERNAME = settings['general']['player']
+DEBUG = settings ['general']['debug']
 TIMEOUT = settings['rotary']['timeout']
 CHOICES = list(URL.keys())
 LASTCHOICE = 0
@@ -97,20 +98,25 @@ def display_choice(counter):
 async def play_choice(counter):
     url = sara.get_url(CHOICES[counter])
     remote.send('power')
-    print(f"url: {url}")
+    if DEBUG:
+        print(f"url: {url}")
     async with aiohttp.ClientSession() as session:
         lms = Server(session, SERVER)
         if lms:
-            print("got server session")
+            if DEBUG:
+                print("got server session")
         else:
-            print(f"failed to get session for {SERVER}")
+            if DEBUG:
+                print(f"failed to get session for {SERVER}")
             return
         player = await lms.async_get_player(name=PLAYERNAME)
         if not player:
-            print("failed to get player")
+            if DEBUG:
+                print("failed to get player")
             return
         else:
-            print("got player")
+            if DEBUG:
+                print("got player")
         if type(url) == list:
             await player.async_query(*url)
         else:
