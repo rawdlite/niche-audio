@@ -2,12 +2,16 @@
 
 SOUNDCARD_DEVICE_FILE = "/proc/asound/sndallodigione/pcm0p/sub0/status" # Path of souncard status file
 SHUTDOWN_TIMEOUT = 15 # Delay before amplifier power down after soundcard released
-DEBUG = False
 #---------------------------8--------
 import os
 import time
 import subprocess
+import argparse
 
+parser = argparse.ArgumentParser(description='check sound is playing and call ~/start.sh and ~/stop.sh when status change is detected')
+parser.add_argument("-v", "--verbose", action="store_true",
+                    help="increase output verbosity")
+args = parser.parse_args()
 deviceFile = None
 lastIdle = None
 
@@ -39,12 +43,12 @@ def CheckSoundcardStatus():
 
 def PowerOn():
     res = subprocess.run("~/start.sh", shell=True, check=True)
-    if DEBUG:
+    if args.verbose:
         print(f"Power ON: {res}")
 
 def PowerOff():
     res = subprocess.run("~/stop.sh", shell=True, check=True)
-    if DEBUG:
+    if args.verbose:
         print(f"Power OFF: {res}")
 
 lastStatus = CheckSoundcardStatus()
@@ -58,19 +62,19 @@ while True:
 
     if nowStatus:
         if not lastStatus:
-            if DEBUG:
+            if args.verbose:
                 print("Soundcard started")
             PowerOn()
             lastStatus = True
     else:
         if lastStatus:
-            if DEBUG:
+            if args.verbose:
                 print("Soundcard released")
             lastStatus = False
             lastIdle = Now()
         elif (not lastStatus) and lastIdle:
             if Now() - lastIdle >= SHUTDOWN_TIMEOUT:
-                if DEBUG:
+                if args.verbose:
                     print("Timeout Reached")
                 PowerOff()
                 lastIdle = None
