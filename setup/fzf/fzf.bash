@@ -1,3 +1,11 @@
+alias vf='vim $(fzf --preview "batcat --color=always {}" --preview-window "~3")'
+alias vfi='vim $(fzf --height 40% --layout reverse --info inline --border --preview "batcat --color=always {}" --preview-window "~3" --bind "ctrl-u:preview-page-up,ctrl-d:preview-page-down,ctrl-b:preview-half-page-up,ctrl-f:preview-half-page-down")'
+#fzf --height 40% --layout reverse --info inline --border \
+#    --preview 'file {}' --preview-window up,1,border-horizontal \
+#    --bind 'ctrl-/:change-preview-window(50%|hidden|)' \
+#    --color 'fg:#bbccdd,fg+:#ddeeff,bg:#334455,preview-bg:#223344,border:#778899'
+export FZF_DEFAULT_COMMAND='fdfind --type file'
+export FZF_CTRL_T_COMMAND="$FZF_DEFAULT_COMMAND"
 # Setup fzf
 # ---------
 if [[ ! "$PATH" == */usr/local/bin* ]]; then

@@ -1,4 +1,6 @@
 #!/usr/bin/python3
+import tomllib
+from pathlib import Path
 from pysqueezebox import Server, Player
 import aiohttp
 import asyncio
@@ -11,13 +13,18 @@ from gpiozero.pins.pigpio import PiGPIOFactory
 from urls.LMSURL import URL, Saraswati
 factory = PiGPIOFactory()
 DEBUG = True
-led = PWMLED(12, pin_factory=factory)
-led_green = PWMLED(5, pin_factory=factory)
-led_red = PWMLED(6, pin_factory=factory)
+with open(Path.home() / ".config" / "niche-audio" / "config.toml", mode="rb") as fp:
+    settings = tomllib.load(fp)
+
+SERVER = settings['general']['server']
+PLAYERNAME = settings['general']['player']
+led = PWMLED(settings['rfid']['led'], pin_factory=factory)
+led_green = PWMLED(settings['rfid']['led_green'], pin_factory=factory)
+led_red = PWMLED(settings['rfid']['led_red'], pin_factory=factory)
 
 factory = PiGPIOFactory()
-PIN_IRQ = 18
-PIN_RST = 22
+PIN_IRQ = settings['rfid']['PIN_IRQ']
+PIN_RST = settings['rfid']['PIN_RST']
 
 
 DANCE   = 4073702892
@@ -35,9 +42,7 @@ BLUE    = 2043527857
 reader = pirc522.RFID(pin_mode='BOARD', pin_rst=PIN_RST, pin_irq=PIN_IRQ, antenna_gain=3)
 #RETRY = 9
 LCD.init(0x27, 1)
-TIMEOUT = 200
-SERVER = '192.168.178.4' # ip address of Logitech Media Server
-player_name = 'RaspdacEvo'
+TIMEOUT = settings['rfid']['timeout']
 
 def destroy():
     print("cleanup")
@@ -49,7 +54,7 @@ async def main():
         led.blink(on_time=0.1, off_time=0.1)
         lms = Server(session, SERVER)
         sara = Saraswati()
-        player = await lms.async_get_player(name=player_name)
+        player = await lms.async_get_player(name=PLAYERNAME)
         #print("got player")
         timeout = TIMEOUT
         await player.async_update()
@@ -68,19 +73,18 @@ async def main():
                 if uid == BLUES:
                     LCD.write(0,0,"Blues")
                     url = sara.get_url('Blues')
-                    #await player.async_query("playlist","loadalbum","Blues","John Lee Hooker","*")
                 elif uid == DANCE:
                     LCD.write(0,0,"Dance")
                     url = sara.get_url('dance')
-                    #await player.async_load_url(URL['dance'], cmd="load")
                 elif uid == KRAUT:
                     LCD.write(0,0,"Krautrock")
                     url = sara.get_url('Krautrock')
                 elif uid == ELEKTRO:
                     LCD.write(0,0,"Electro")
                     url = sara.get_url('Electro')
-                    #print("play Elektro")
-                    #await player.async_load_url(URL['electro'], cmd="load")
+                elif uid == S1:
+                    LCD.write(0,0,"Soul")
+                    url = sara.get_url('Soul')
                 elif uid == J1:
                     LCD.write(0,0,"Jazz")
                     url = sara.get_url('Jazz')

@@ -6,7 +6,7 @@ import aiohttp
 import asyncio
 import argparse
 
-parser = argparse.ArgumentParser(description='stop')
+parser = argparse.ArgumentParser(description='play next song')
 parser.add_argument("-v", "--verbose", action="store_true",
                     help="increase output verbosity")
 args = parser.parse_args()
@@ -23,10 +23,7 @@ async def main():
     async with aiohttp.ClientSession() as session:
         lms = Server(session, SERVER)
         player = await lms.async_get_player(name=PLAYERNAME)
-        await player.async_stop()
-        if args.verbose:
-            await player.async_update()
-            print(player.mode)
+        await player.async_index("+1")
 
 loop = asyncio.get_event_loop()
 loop.run_until_complete(main())
