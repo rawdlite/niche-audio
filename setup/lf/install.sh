@@ -13,15 +13,19 @@ export CARGO_INSTALL_ROOT=/usr/local
 #get path to script
 DIR=$PWD/$(dirname $0)
 #sudo apt install mpv flac -y
-# install run-mailcap-rs
-#mkdir ~/src
-git clone https://github.com/cglindkamp/run-mailcap-rs.git ~/src/run-mailcap-rs
+# install run-mailcap-rs /deprecated not handling symbolic links
+mkdir ~/src
+#git clone https://github.com/cglindkamp/run-mailcap-rs.git ~/src/run-mailcap-rs
 #cd ~/src/run-mailcap-rs
 #cargo install
 #make
 #sudo make install
-#ln -s $DIR/mailcap ~/.mailcap
-#ln -s $DIR/scripts/* /usr/local/bin
+git clone https://github.com/pld-linux/mailcap.git ~/src/mailcap
+sudo cp ~/src/mailcap/mailcap /usr/share/etc
+sudo cp ~/stc/mailcap/run-mailcap /usr/local/bin
+sudo chmod +x /usr/local/bin/run-mailcap
+ln -s $DIR/mailcap ~/.mailcap
+ln -s $DIR/scripts/* /usr/local/bin
 python3 -m pip install eyeD3
 if grep -Fq "lf.bash" ~/.bashrc
 then

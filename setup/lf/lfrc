@@ -1,7 +1,7 @@
 set incsearch true
 set shell bash
 set ifs "\n"
-set previewer run-mailcap-rs
+set previewer run-mailcap
 setlocal ~/ hidden
 setlocal /data/music/music_data/uncut/radioEins/ reverse
 
