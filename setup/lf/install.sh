@@ -1,6 +1,6 @@
 #!/bin/bash
 # reduce dependencies an make option for basic install
-sudo apt install mpv fd-find golang flac -y
+sudo apt install less mpv fd-find golang flac -y
 # update go 
 # dietpi-software reinstall 188
 export GOPATH=/usr/local
@@ -26,6 +26,7 @@ sudo cp ~/stc/mailcap/run-mailcap /usr/local/bin
 sudo chmod +x /usr/local/bin/run-mailcap
 ln -s $DIR/mailcap ~/.mailcap
 ln -s $DIR/scripts/* /usr/local/bin
+echo "i quit" >> ~/.config/lesskey
 python3 -m pip install eyeD3
 if grep -Fq "lf.bash" ~/.bashrc
 then
