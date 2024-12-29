@@ -1,41 +1,113 @@
 set incsearch true
-set shell bash
+set shell "bash"
 set ifs "\n"
-set previewer run-mailcap-rs
+set previewer l-mime-viewer
+set drawbox true
+set mouse true
+set user_player ""
 setlocal ~/ hidden
 setlocal /data/music/music_data/uncut/radioEins/ reverse
-
-#map i $more $f
+set cursorpreviewfmt "\033[7;90m"
+%test $LF_LEVEL -eq 1 || >&2 printf "Warning: You're in a nested lf instance!"
+#map i $less $f
 map <enter> shell-wait
-map x $opp --action=print $f
+map x !l-mime-run $f
 map X !$f
-map a :push %mkdir<space>
-map <c-z> $ kill -STOP $PPID
+map a
+map ad :push %mkdir<space>
+cmd touch %{{
+    IFS=" "
+    file="$*"
+    touch -- "$file"
+    file="$(printf '%s' "$file" | sed 's/\\/\\\\/g;s/"/\\"/g')"
+    lf -remote "send $id :select \"$file\"; \$\$EDITOR \"$file\""
+}}
+map af :touch
+cmd chmodx &{{
+	chmod u+x $fx
+	lf -remote "send $id reload"
+}}
+cmap <right> :cmd-enter; edit
+cmd edit !l-mime-edit $f
 
+cmd follow_link %{{
+	lf -remote "send ${id} select \"$(readlink $f)\""
+}}
+
+map <c-enter> follow_link
+# y for copy) and P to paste symlink
+# d (select for cut) and P to paste hard link
+cmd link %{{
+    set -- $(cat ~/.local/share/lf/files)
+    mode="$1"
+    shift
+    if [ "$#" -lt 1 ]; then
+        lf -remote "send $id echoerr no files to link"
+        exit
+    fi
+    case "$mode" in
+        # 'copy' mode indicates a symlink
+        copy) ln -sr -t . -- "$@";;
+        # while 'move' mode indicates a hard link
+        move)
+            ln -t . -- "$@"
+            lf -remote "send clear"
+            ;;
+    esac
+}}
+
+map al :link
+map <c-p> :link
+#put in bg
+#map <c-z> $ kill -STOP $PPID
+map <a-h> ${{
+        clear
+        cmd=$(
+            lf -remote "query $id history" |
+            awk -F'\t' 'NR > 1 { print $NF}' |
+            sort -u |
+            fzf --reverse --prompt='Execute command: '
+        )
+        lf -remote "send $id $cmd"
+    }}
 # define a custom 'rename' command without prompt for overwrite
 cmd rename %[ -e $1 ] && printf "file exists" || mv $f $1
 map r push :rename<space>
+map c copy
 map E $ledit $f
 
 map P # lms Player commands
 
-map Pa $lms-play.py -p $PLAYER -c add $fx
-map Pi $lms-play.py -p $PLAYER -c insert $fx
-map Pn $lms-play.py -p $PLAYER -c play_now $fx
-map Pp $lms-play.py -p $PLAYER -c play $fx
-map Ps !whatsplaying.py -p $PLAYER
-map PA $lms-play.py -p $PLAYER -c add -d $PWD
-map PI $lms-play.py -p $PLAYER -c insert -d $PWD
-map PN $lms-play.py -p $PLAYER -c play_now -d $PWD
-map PP $lms-play.py -p $PLAYER -c load -d $PWD
+
+map Pa !lmscommander -v $lf_user_player -c add $fx
+map Pi !lmscommander -v $lf_user_player -c insert "$fx"
+map Pn $lms-play.py -v $lf_user_player -c play_now $fx
+#map Pp !{{
+#	echo "opt: $lf_user_player"
+#        lms-play.py -v "$lf_user_player" -c play $fx
+#}}
+map Pp !echo "player: >$lf_user_player<i $fx";lmscommander -v $lf_user_player -c play "$fx"
+map Pw !echo "$lf_user_player"; whatsplaying.py -v "$lf_user_player"
+map PA $lms-play.py -v "$lf_user_player" -c add -d $PWD
+map PI $lms-play.py -v "$lf_user_player" -c insert -d $PWD
+map PN $lms-play.py -v "$lf_user_player" -c play_now -d $PWD
+map PP $lms-play.py -v "$lf_user_player" -c load -d $PWD
 
 
 cmd setplayer ${{
-	set -f
-	read ans
-	printf "Player: "
-	echo $ans > $PLAYER
+        set -f
+        echo "oldplayer: $PLAYEROPT"
+        PLAYEROPT="-p $(~/.local/bin/lmsgetplayers.py | fzf)"
+        echo "newplayer: $PLAYEROPT"
+        export PLAYEROPT="$PLAYEROPT"
 }}
+
+cmd choose_player !{{
+       set -f
+       PLAYER_OPT="--player=$(~/.local/bin/lmsgetplayers.py|fzf)"
+       lf -remote "send $id set user_player \"$PLAYER_OPT\""
+}}
+map Ps choose_player
 
 map b # organise music with beets
 #map ba !beet edit -a --all $PWD
@@ -203,22 +275,56 @@ cmd delete ${{
 # map <delete> trash
 map <backspace2> delete
 
-cmd edit-config ${{
+cmd edit-lf-config ${{
     $EDITOR /etc/lf/lfrc
     lf -remote "send $id source /etc/lf/lfrc"
 }}
 
-map C edit-config
+cmd edit-lf-local-config ${{
+    $EDITOR ~/.config/lf/lfrc
+    lf -remote "send $id source /etc/lf/lfrc"
+}}
+
+cmd edit-nvim-config ${{
+    $EDITOR ~/.config/nvim/init.vim
+    }}
+
+cmd edit-vim-config ${{
+    $EDITOR ~/.vimrc 
+	}}
+
+cmd edit-mailcap-config ${{
+    $EDITOR ~/.mailcap 
+	}}
+
+map C
+map Cl edit-lf-config
+map CL edit-lf-local-config
+map Cm edit-mailcap-config
+map Cn edit-nvim-config
+map Cv edit-vim-config
+
 
 cmd bookmark_jump ${{
     res="$(cat $LF_BOOKMARK_PATH/$(ls $LF_BOOKMARK_PATH | fzf))"
     lf -remote "send $id cd \"$res\""
 }}
 
+map gj bookmark_jump
+
 cmd bookmark_create ${{
-    read ans
+    read -p "bookmark: " ans
     echo $PWD > $LF_BOOKMARK_PATH/$ans
 }}
+
+map gb bookmark_create
+
+cmd follow-link %{{
+  lf -remote "send $id select \"$(readlink -- "$f" | sed 's/\\/\\\\/g;s/"/\\"/g')\""
+}}
+
+map gL follow-link
+
 
 cmd toggle_preview %{{
     if [ "$lf_preview" = "true" ]; then

@@ -6,23 +6,34 @@ import aiohttp
 import asyncio
 import argparse
 
-parser = argparse.ArgumentParser(description='show whats playing')
-parser.add_argument("-v", "--verbose", action="store_true",
-                    help="increase output verbosity")
-args = parser.parse_args()
-
 with open(Path.home() / ".config" / "niche-audio" / "config.toml", mode="rb") as fp:
     settings = tomllib.load(fp)
 
 SERVER = settings['general']['server']
 PLAYERNAME = settings['general']['player']
+
+parser = argparse.ArgumentParser(description='show whats playing')
+parser.add_argument("-v", "--verbose", action="store_true",
+                    help="increase output verbosity")
+parser.add_argument("-s", "--server", dest="server", default=SERVER)
+parser.add_argument("-p", "--player", dest="player", default=PLAYERNAME, required=False)
+args = parser.parse_args()
+
 if args.verbose:
-    print(f"server: {SERVER}\nplayer: {PLAYERNAME}")
+    print(f"server: {args.server}\nplayer: >{args.player}<")
 
 async def main():
     async with aiohttp.ClientSession() as session:
-        lms = Server(session, SERVER)
-        player = await lms.async_get_player(name=PLAYERNAME)
+        lms = Server(session, args.server)
+        if not lms:
+            if args.verbose:
+                print("could not get server")
+            exit(1)
+        player = await lms.async_get_player(name=args.player)
+        if not player:
+            if args.verbose:
+                print("could not get player")
+            exit(1)
         await player.async_update()
         if args.verbose:
             print(f"got player {player.player_id}")

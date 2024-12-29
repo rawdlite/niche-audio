@@ -1,0 +1,30 @@
+/boot/config.txt
+
+#dtoverlay=vc4-fkms-v3d
+hdmi_force_hotplug=1
+hdmi_group=2
+hdmi_mode=27
+
+#:.......-----------........
+#on picoreplayer
+
+#disable jivelite autostart
+#boot into console
+
+sudo TSLIB_FBDEVICE=/dev/fb0 TSLIB_TSDEVICE=/dev/input/event0  /usr/l
+ocal/bin/ts_calibrate
+__------_-------_-------
+#on Xserver
+
+apt install xserver-xorg-input-evdev
+
+cp /usr/share/X11/xorg.conf.d/10-evdev.conf /usr/share/X11/xorg.conf.d/45-evdev.conf
+# set Driver evdev
+vim /usr/share/X11/xorg.conf.d/45-evdev.conf
+# get input device name
+cat /proc/bus/input/devices
+vim /usr/share/X11/xorg.conf.d/99-calibration.conf
+apt install xinput-calibrator
+xinput-calbrator 
+
+#copy values found to 99-calibration.conf
