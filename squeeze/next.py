@@ -6,16 +6,18 @@ import aiohttp
 import asyncio
 import argparse
 
-parser = argparse.ArgumentParser(description='play next song')
-parser.add_argument("-v", "--verbose", action="store_true",
-                    help="increase output verbosity")
-args = parser.parse_args()
-
 with open(Path.home() / ".config" / "niche-audio" / "config.toml", mode="rb") as fp:
     settings = tomllib.load(fp)
 
 SERVER = settings['general']['server']
 PLAYERNAME = settings['general']['player']
+
+parser = argparse.ArgumentParser(description='play next song')
+parser.add_argument("-v", "--verbose", action="store_true",
+                    help="increase output verbosity")
+parser.add_argument("-p", "--player", dest="player", default=PLAYERNAME)
+args = parser.parse_args()
+
 if args.verbose:
     print(f"server: {SERVER}\nplayer: {PLAYERNAME}")
 

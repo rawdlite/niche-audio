@@ -22,7 +22,15 @@ if args.verbose:
 async def main():
     async with aiohttp.ClientSession() as session:
         lms = Server(session, SERVER)
+        if not lms:
+            if args.verbose:
+                print("could not get server")
+            exit(1)
         player = await lms.async_get_player(name=PLAYERNAME)
+        if not player:
+            if args.verbose:
+                print("could not get player")
+            exit(1)
         await player.async_play()
         if args.verbose:
             await player.async_update()

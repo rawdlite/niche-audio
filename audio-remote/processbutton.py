@@ -1,4 +1,5 @@
-from gpiozero import Device, ButtonBoard, PWMLED
+#!/usr/bin/env python3
+from gpiozero import Device, Button, ButtonBoard, PWMLED
 from gpiozero.pins.pigpio import PiGPIOFactory
 import time
 import pprint
@@ -21,9 +22,12 @@ with open(Path.home() / ".config" / "niche-audio" / "config.toml", mode="rb") as
     settings = tomllib.load(fp)
 
 button_config = settings['button_config']
-button_actions = settings['button_actions']
+button_actions_sw0 = settings['button_actions_sw0']
+button_actions_sw1 = settings['button_actions_sw1']
+switch1 = Button(settings['switch']['switch1'])
 if args.verbosity > 1:
-    pprint.pp(button_actions,indent=2,sort_dicts=True)
+    pprint.pp(button_actions_sw0,indent=2,sort_dicts=True)
+    pprint.pp(button_actions_sw1,indent=2,sort_dicts=True)
 
 led_green = PWMLED(settings['led']['led_green'],
                    active_high=False)
@@ -33,22 +37,36 @@ bb = ButtonBoard(hold_time=3,hold_repeat=False, **button_config)
 
 seperator = "-"
 
-led_red.blink()
+led_red.pulse()
+time.sleep(0.5)
 led_green.pulse()
-time.sleep(4)
+time.sleep(5)
 led_red.off()
 led_green.off()
 
 def say_pressed(butt):
-    script = button_actions[[k for k,v in butt.value._asdict().items() if v == 1][0]]
+    if switch1.value:
+        script = button_actions_sw1[[k for k,v in butt.value._asdict().items() if v == 1][0]]
+    else:
+        script = button_actions_sw0[[k for k,v in butt.value._asdict().items() if v == 1][0]]
     if args.verbosity > 1:
         print(f"press {butt.value}")
         print(tuple(butt.value))
     if args.verbosity:
         print(script)
-    res = subprocess.run(script, shell=True, check=True)
-    if args.verbosity > 1:
-        print(res)
+    led_green.on()
+    try:
+        res = subprocess.run(script, shell=True, check=True)
+        if args.verbosity > 1:
+            print(res)
+    except subprocess.CalledProcessError as err:
+        print(f"{script} failed {err}")
+        pass
+    except Exception as err:
+        print(f"Unexpected {err=}, {type(err)=}")
+        pass
+    finally:
+        led_green.off()
 
 def say_held(butt):
     print(butt.value)

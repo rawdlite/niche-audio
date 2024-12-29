@@ -1,6 +1,7 @@
 #!/bin/bash
 # reduce dependencies an make option for basic install
 sudo apt install mpv fd-find golang flac -y
+sudo dietpi-software reinstall 188
 export GOPATH=/usr/local
 env CGO_ENABLED=0 go install -ldflags="-s -w" github.com/gokcehan/lf@latest
 mkdir /etc/lf
