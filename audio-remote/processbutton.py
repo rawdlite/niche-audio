@@ -21,13 +21,17 @@ Device.pin_factory = PiGPIOFactory()
 with open(Path.home() / ".config" / "niche-audio" / "config.toml", mode="rb") as fp:
     settings = tomllib.load(fp)
 
-button_config = settings['button_config']
-button_actions_sw0 = settings['button_actions_sw0']
-button_actions_sw1 = settings['button_actions_sw1']
-switch1 = Button(settings['switch']['switch1'])
+button_config = settings.get('button_config')
+button_actions = settings.get('button_actions')
+button_actions_sw0 = settings.get('button_actions_sw0')
+button_actions_sw1 = settings.get('button_actions_sw1')
+if settings.get('switch'):
+    switch1 = Button(settings['switch']['switch1'])
+
 if args.verbosity > 1:
     pprint.pp(button_actions_sw0,indent=2,sort_dicts=True)
     pprint.pp(button_actions_sw1,indent=2,sort_dicts=True)
+    pprint.pp(button_actions,indent=2,sort_dicts=True)
 
 led_green = PWMLED(settings['led']['led_green'],
                    active_high=False)
@@ -44,11 +48,14 @@ time.sleep(5)
 led_red.off()
 led_green.off()
 
-def say_pressed(butt):
-    if switch1.value:
-        script = button_actions_sw1[[k for k,v in butt.value._asdict().items() if v == 1][0]]
+def button_pressed(butt):
+    if settings.get('switch'):
+        if switch1.value:
+            script = button_actions_sw1[[k for k,v in butt.value._asdict().items() if v == 1][0]]
+        else:
+            script = button_actions_sw0[[k for k,v in butt.value._asdict().items() if v == 1][0]]
     else:
-        script = button_actions_sw0[[k for k,v in butt.value._asdict().items() if v == 1][0]]
+        script = button_actions[[k for k,v in butt.value._asdict().items() if v == 1][0]]
     if args.verbosity > 1:
         print(f"press {butt.value}")
         print(tuple(butt.value))
@@ -68,12 +75,6 @@ def say_pressed(butt):
     finally:
         led_green.off()
 
-def say_held(butt):
-    print(butt.value)
-    print(int(''.join(str(bit) for bit in tuple(butt.value)), 2))
-    butt.wait_for_release(5)
-
-bb.when_pressed = say_pressed
-bb.when_held = say_held
+bb.when_pressed = button_pressed
 
 pause()

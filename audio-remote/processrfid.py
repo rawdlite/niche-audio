@@ -62,11 +62,13 @@ async def main():
         led.off()
         while True:
             led.off()
-            #print("waiting")
+            if DEBUG:
+                print("waiting")
             reader.wait_for_tag()
             uid = reader.read_id(True)
             if uid is not None and uid != rfid_uid:
-                #print(uid)
+                if DEBUG:
+                    print(uid)
                 rfid_uid = uid
                 timeout = TIMEOUT
                 led.blink(on_time=0.2, off_time=0.1)
@@ -75,7 +77,7 @@ async def main():
                     url = sara.get_url('Blues')
                 elif uid == DANCE:
                     LCD.write(0,0,"Dance")
-                    url = sara.get_url('dance')
+                    url = sara.get_url('Dance')
                 elif uid == KRAUT:
                     LCD.write(0,0,"Krautrock")
                     url = sara.get_url('Krautrock')
@@ -94,11 +96,8 @@ async def main():
                     else:
                         await player.async_load_url(url, cmd="load")
                     url = None    
-            time.sleep(0.5)
-            timeout -= 1
-            if timeout == 0:
+                time.sleep(2)
                 LCD.closelight()
-            #print("running")
 
 loop = asyncio.get_event_loop()
 loop.run_until_complete(main())
