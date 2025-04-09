@@ -1,7 +1,7 @@
 #!/bin/bash
 # reduce dependencies an make option for basic install
 sudo apt install less mpv fd-find golang flac -y
-sudo dietpi-software reinstall 188
+sudo dietpi-software install 188
 # update go 
 # dietpi-software reinstall 188
 export GOPATH=/usr/local
@@ -23,7 +23,7 @@ mkdir ~/src
 #sudo make install
 git clone https://github.com/pld-linux/mailcap.git ~/src/mailcap
 sudo cp ~/src/mailcap/mailcap /usr/share/etc
-sudo cp ~/stc/mailcap/run-mailcap /usr/local/bin
+sudo cp ~/src/mailcap/run-mailcap /usr/local/bin
 sudo chmod +x /usr/local/bin/run-mailcap
 ln -s $DIR/mailcap ~/.mailcap
 ln -s $DIR/scripts/* /usr/local/bin
