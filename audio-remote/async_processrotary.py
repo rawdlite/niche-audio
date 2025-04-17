@@ -1,7 +1,10 @@
 #!/usr/bin/env python3
 import tomllib
 from pathlib import Path
-from lms import Server, __version__
+from pysqueezebox import Server, Player
+import aiohttp
+import asyncio
+import piir
 from pigpio_encoder.rotary import Rotary
 import time
 from luma.core.interface.serial import i2c
@@ -13,7 +16,7 @@ from urls.LMSURL import URL, Saraswati
 with open(Path.home() / ".config" / "niche-audio" / "config.toml", mode="rb") as fp:
     settings = tomllib.load(fp)
 
-SERVER_ID = settings['general']['server']
+SERVER = settings['general']['server']
 PLAYERNAME = settings['general']['player']
 DEBUG = settings ['general']['debug']
 TIMEOUT = settings['rotary']['timeout']
@@ -24,8 +27,7 @@ serial = i2c(port=1, address=0x3C)
 device = sh1106(serial)
 oled_font = ImageFont.truetype('DejaVuSans.ttf', 20)
 runtime = 0
-server = None
-player = None
+remote = piir.Remote('/root/src/niche-audio/piir/rme.json', 18)
 
 my_rotary = Rotary(
     clk_gpio=settings['rotary']['clk_pin'],
@@ -34,6 +36,7 @@ my_rotary = Rotary(
 )
 
 sara = Saraswati()
+loop = asyncio.get_event_loop()
 
 def up_callback(counter):
     if counter >= my_rotary.max:
@@ -55,7 +58,7 @@ def sw_short():
     if counter <= -1:
         counter = 0
     display_choice(counter)
-    play_choice(counter)
+    loop.run_until_complete(play_choice(counter))
 
 
 def sw_long():
@@ -92,29 +95,32 @@ def display_choice(counter):
     with canvas(device) as draw:
         draw.text((5, 20), CHOICES[counter], font=oled_font, fill="white")
 
-def play_choice(counter):
-    global server
-    global player
+async def play_choice(counter):
     url = sara.get_url(CHOICES[counter])
-    if not server:
-        server = Server(SERVER_ID)
-        server.update()
-    if not player:
-        player = (next((player for player in server.players
-                        if PLAYERNAME.lower() in [
-                            player.player_id,
-                            player.name.lower(),
-                            player.ip]), None)
-                  if PLAYERNAME else None)
-    #remote.send('power')
+    remote.send('power')
     if DEBUG:
         print(f"url: {url}")
-    if type(url) == list:
-        player.query(*url)
-        player.play()
-    else:
-        player.play_uri(url)
-            
+    async with aiohttp.ClientSession() as session:
+        lms = Server(session, SERVER)
+        if lms:
+            if DEBUG:
+                print("got server session")
+        else:
+            if DEBUG:
+                print(f"failed to get session for {SERVER}")
+            return
+        player = await lms.async_get_player(name=PLAYERNAME)
+        if not player:
+            if DEBUG:
+                print("failed to get player")
+            return
+        else:
+            if DEBUG:
+                print("got player")
+        if type(url) == list:
+            await player.async_query(*url)
+        else:
+            await player.async_load_url(url, cmd="load")
 
 def main():
     global runtime

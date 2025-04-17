@@ -4,6 +4,8 @@ import logging
 from time import time
 import tomllib
 import argparse, textwrap
+import os
+from datetime import timedelta
 from pathlib import Path
 from json import dumps as to_json
 from sys import stderr
@@ -12,100 +14,28 @@ from lms import Server, __version__
 from re import match
 from argparse import ArgumentParser
 
-_LOGGER = logging.getLogger(__name__)
+TIMEOUT = timedelta(seconds=5)
 
-with open(Path.home() / ".config" / "niche-audio" / "config.toml", mode="rb") as fp:
-    settings = tomllib.load(fp)
+class LMServer(Server):
+    def __init__(self,host=None, port=9000, username=None, password=None):
+        super().__init__(host=host,port=port)
 
-SERVER = settings['general']['server']
-LOGFMT = "%(asctime)s %(levelname)5s (%(threadName)s) [%(name)s] %(message)s"
-DATEFMT = "%y-%m-%d %H:%M.%S"
-PATH_ON_HOST = "/data/music/music_data"
-PATH_IN_DOCKER = "/music"
-PLAYER = settings['general']['player']
+    def get_player(self, player_id=None):
+        my_player = None
+        if player_id:
+            for player in self.players:
+                if player_id.lower() in [
+                    player.player_id,
+                    player.name.lower(),
+                    player.ip]:
+                    my_player = player
+        elif len(self.players) >= 1:
+            my_player = self.players[0]
+        return my_player
 
-parser = ArgumentParser(description="Interact with Logitech Media Server",
-        formatter_class=argparse.RawTextHelpFormatter)
-parser.add_argument("-v", "--verbose", action='count', default=0,
-                    help="increase output verbosity")
-parser.add_argument("-c", "--cmd", dest="cmd", default="status",
-        help=textwrap.dedent('''\
-                status : show players and their status
-                play   : without argument start player
-                play <files> : play files or urls
-                add <files>  : add files to end of playlist
-                insert <files>: play files next
-                pause  : pause the player
-                prev   : previous track
-                next   : next track
-                shuffle: shuffle tracks
-                unshuffle    : unshuffle tracks
-                toggle_shuffle : toggle shuffle state
-                sleep  : sleep in 30min
-                random : play random album
-                show   : show test string'''))
-parser.add_argument("-s", "--server", dest="server", default=SERVER)
-parser.add_argument("-p", "--player", dest="player", default=PLAYER)
-parser.add_argument("-d", "--dir", dest="folder")
-parser.add_argument("tracks", nargs="*")
-args = parser.parse_args()
-
-print(args)
-
-if args.verbose:
-    print(f"file: {args.tracks}  cmd: {args.cmd}")
-    print(f"player: {args.player} server: {args.server}")
-
-def timeFmt(secs):
-    if not secs:
-        return ''
-    h, r = divmod(secs, 3600)
-    m, secs = divmod(r, 60)
-    return '%s%02d.%02d' % ('' if not h else '%02d:' % h, m, secs)
-
-def parse_track(track):
-
-    if track.startswith(PATH_ON_HOST):
-        print('is file')
-        return  f"file://{track.replace(PATH_ON_HOST,PATH_IN_DOCKER)}"
-    elif track.startswith('http'):
-        print('is_url')
-        return track
-    else:
-        print("whats going on?")
-
-def main():
-    """Command line interface."""
-    log_level = [logging.ERROR, logging.INFO, logging.DEBUG][args.verbose]
-
-    try:
-        import coloredlogs
-        coloredlogs.install(level=log_level,
-                            stream=stderr,
-                            datefmt=DATEFMT,
-                            fmt=LOGFMT)
-    except ImportError:
-        _LOGGER.debug("no colored logs. pip install coloredlogs?")
-        logging.basicConfig(level=log_level,
-                            stream=stderr,
-                            datefmt=DATEFMT,
-                            format=LOGFMT)
-
-    server = Server(args.server)
-    server.update()
-
-    player_id = args.player
-    player = (next((
-        player for player in server.players
-        if player_id.lower() in [
-                player.player_id,
-                player.name.lower(),
-                player.ip]), None)
-              if player_id else None)
-
-    if args.cmd == 'status':
-        print(f'{server._host}:{server._port} ({server.version})')
-        for player in server.players:
+    def status(self,*args):
+        print('status called')
+        for player in self.players:
             if player.is_playing:
                 status = 'playing'
             elif player.is_paused:
@@ -119,62 +49,175 @@ def main():
                   f'{status:7} '
                   f'{(player.artist or "")[:10]:10} {(player.title or "")[:10]:10} '
                   f'{round(player.position_pct):3}% '
-                  f'{timeFmt(player.position) or "     "}/'
-                  f'{timeFmt(player.duration) or "     "} ')
+                  f'{self._timeFmt(player.position) or "     "}/'
+                  f'{self._timeFmt(player.duration) or "     "} ')
 
-    #    url='https://open.spotify.com/track/4uLU6hMCjMI75M1A2tKUQC'
-    #    server.players[0].query('playlist', 'play', url)
-    elif player:
-        if args.tracks:
-            tracks = []
-            for track in args.tracks:
-                print(f"track: {track}")
-                url = parse_track(track)
-                tracks.append(url)
-            print(tracks)
-            if args.cmd == 'play':
-                if len(tracks) > 1:
-                    player.enqueue_uri(tracks)
-                    player.play()
-                else:
-                    player.play_uri(tracks)
-            elif args.cmd == 'add':
-                player.enqueue_uri(tracks)
-            elif args.cmd == 'insert':
-                player.query('playlist', 'insert', tracks)
-        elif args.cmd == 'play':
-            player.play()
-        elif args.cmd == 'pause':
-            player.pause()
-        elif args.cmd == 'next':
-            player.next()
-        elif args.cmd == 'prev':
-            player.previous()
-        elif args.cmd == 'shuffle':
-            player.query('playlist', 'shuffle', 1)
-        elif args.cmd == 'unshuffle':
-            player.query('playlist', 'shuffle', 0)
-        elif args.cmd == 'toggle_shuffle':
-            player.query('playlist', 'shuffle')
-        elif args.cmd == 'sleep':
-            player.query('sleep', '1800')
-        elif args.cmd == 'random':
-            player.query('randomplay', 'albums')
-        elif args.cmd == 'show':
-            player.query('show','line1:TestShow', 'duration:2')
 
-        # playlist loadalbum
-        # playlist addalbum <genre> <artist> <album>
-        #elif args['volume']:
-        #    if args['<vol>']:
-        #        player.set_volume(args['<vol>'])
-        #    elif args['up']:
-        #        player.volume_up()
-        #    elif args['down']:
-        #        player.volume_down()
+        
+    def _timeFmt(self, secs):
+        if not secs:
+            return ''
+        h, r = divmod(secs, 3600)
+        m, secs = divmod(r, 60)
+        return '%s%02d.%02d' % ('' if not h else '%02d:' % h, m, secs)        
+
+
+class LMPlayer():
+    def __init__(self, player):
+        self.player = player
+        self.server = player._server
+        self.PATH_ON_HOST = "/data/music/music_data"
+        self.PATH_IN_DOCKER = "/music"
+
+    def __str__(self):
+        if self.player.is_playing:
+            status = 'playing'
+        elif self.player.is_paused:
+            status = 'paused'
+        elif self.player.is_stopped:
+            status = 'stopped'
+        else:
+            status = '?'
+        return (f"player: {self.player.name} {self.player.player_id} {self.player.model} {self.player.ip}"
+                f"\n{self.player.artist or ''} {self.player.title or ''}"
+                f"\n{self.player.position_pct}: {self.player.position} / {self.player.duration}"
+                f"\nstatus: {status}")
+
+    def parse_track(self, track):
+        if track.startswith(self.PATH_ON_HOST):
+            #print('is file')
+            return  f"file://{track.replace(self.PATH_ON_HOST,self.PATH_IN_DOCKER)}"
+        elif track.startswith('http'):
+            #print('is_url')
+            return track
+        else:
+            print(f"whats going on with {track}?")
+
+    def build_tracks(self, tracks):
+        track_list = []
+        for track in tracks:
+            track_uri = self.parse_track(track)
+            track_list.append(track_uri)
+        return track_list     
+    
+    def status(self,*args):
+        self.server.status()
+
+    def show(self, line1, line2=''):
+        self.player.query('display',line1,line2,'4')   
+
+    def pause(self, *args):
+        self.player.pause()
+        self.show('pause')
+
+    def play(self, tracks):
+        track_list = None
+        self.show('play',track_list)
+
+        if tracks:
+            track_list = self.build_tracks(tracks)
+            if len(tracks) > 1:
+                self.player.enqueue_uri(track_list)
+                self.player.play()
+            else:
+                self.player.play_uri(track_list)
+        else:
+            self.player.play()
+
+    def add(self, tracks):
+        track_list = self.build_tracks(tracks)
+        self.show('enqueue',track_list)
+        self.player.enqueue_uri(track_list)
+        
+    def insert(self, tracks):
+        track_list = self.build_tracks(tracks)
+        self.show('insert',track_list)
+        player.query('playlist', 'insert', track_list)
+
+    def next(self, *args):
+        self.show('next','')
+        self.player.next()
+
+    def prev(self, *args):
+        self.show('previous','#')
+        self.player.previous()
+
+    def shuffle(self, *args):
+        self.show('shuffle','')
+        self.player.query('playlist', 'shuffle', 1)
+        
+    def unshuffle(self, *args):
+        self.show('unshuffle','')
+        self.player.query('playlist', 'shuffle', 0)
+        
+    def toggle_shuffle(self, *args):
+        self.show('toggle_shuffle','')
+        self.player.query('playlist', 'shuffle')
+        
+    def random(self, *args):
+        self.show('random','')
+        self.player.query('randomplay', 'albums')
+
+    def sleep(self, args):
+        res = self.player.query('sleep', '?')
+        active_sleep = int(res.get('_sleep', 0))
+        sleep_time = 600
+        #print(f"active_sleep: {active_sleep} {res}")    
+        if args:
+            try:
+                sleep_time = int(args[0]) * 60
+            except ValueError:
+                print(f"error: argument {args[0]} not a number")
+        sleep_set = active_sleep + sleep_time
+        #print(f"sleep_time: {sleep_set}")
+        self.show('sleep',f"{sleep_set/60} min")
+        self.player.query('sleep', sleep_set)
+
+    def unsleep(self, *args):
+        self.player.query('sleep', 0)
+        
+                
+def main():
+    with open(os.path.join(Path.home(),".config","niche-audio","config.toml"), mode="rb") as fp:
+        settings = tomllib.load(fp)
+    server_id = settings.get('general',{}).get('server')
+    player_id = settings['general']['player']
+    parser = ArgumentParser(description="Interact with Logitech Media Server",
+        formatter_class=argparse.RawTextHelpFormatter)
+    parser.add_argument('cmd', help=textwrap.dedent('''\
+                status : show players and their status
+                info   : show player info
+                play   : without argument start player
+                play <tracks> : play files or urls
+                add <tracks>  : add files to end of playlist
+                insert <tracks>: play files next
+                pause  : pause the player
+                prev   : previous track
+                next   : next track
+                shuffle: shuffle tracks
+                unshuffle    : unshuffle tracks
+                toggle_shuffle : toggle shuffle state
+                sleep  : set/add sleeptime <min> default 30min
+                random : play random album
+                show   : show test string'''))
+    parser.add_argument("-v", "--verbose", action='count', default=0,
+                    help="increase output verbosity")
+    parser.add_argument("-s", "--server", dest="server", default=server_id)
+    parser.add_argument("-p", "--player", dest="player", default=player_id)
+    parser.add_argument("tracks", nargs="*", help='files or url')
+    args = parser.parse_args()
+    server = LMServer(host=server_id)
+    server.update()
+    my_player = LMPlayer(server.get_player(player_id))
+    if args.verbose:
+        print(my_player)
+        print(args.cmd)
+        print(args.tracks)
+
+    if args.cmd == 'info':
+        print(my_player)
     else:
-        exit('?')
-
+        getattr(my_player, args.cmd)(args.tracks)
 
 if __name__ == '__main__':
    main()

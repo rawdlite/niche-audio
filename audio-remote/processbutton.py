@@ -29,33 +29,30 @@ if settings.get('switch'):
     switch1 = Button(settings['switch']['switch1'])
 
 if args.verbosity > 1:
+    pprint.pp(button_config,indent=2,sort_dicts=True)
     pprint.pp(button_actions_sw0,indent=2,sort_dicts=True)
     pprint.pp(button_actions_sw1,indent=2,sort_dicts=True)
     pprint.pp(button_actions,indent=2,sort_dicts=True)
 
 led_green = PWMLED(settings['led']['led_green'],
-                   active_high=False)
+                   active_high=True)
 led_red = PWMLED(settings['led']['led_red'],
-                 active_high=False)
-bb = ButtonBoard(hold_time=3,hold_repeat=False, **button_config)
-
+                 active_high=True)
+bb = ButtonBoard(hold_time=3,hold_repeat=False,pull_up=False, **button_config)
+#button_1 = Button(26, pull_up=False)
 seperator = "-"
 
-led_red.pulse()
-time.sleep(0.5)
-led_green.pulse()
-time.sleep(5)
 led_red.off()
 led_green.off()
 
 def button_pressed(butt):
-    if settings.get('switch'):
-        if switch1.value:
-            script = button_actions_sw1[[k for k,v in butt.value._asdict().items() if v == 1][0]]
-        else:
-            script = button_actions_sw0[[k for k,v in butt.value._asdict().items() if v == 1][0]]
-    else:
-        script = button_actions[[k for k,v in butt.value._asdict().items() if v == 1][0]]
+#    if settings.get('switch'):
+#        if switch1.value:
+#            script = button_actions_sw1[[k for k,v in butt.value._asdict().items() if v == 1][0]]
+#        else:
+#            script = button_actions_sw0[[k for k,v in butt.value._asdict().items() if v == 1][0]]
+#    else:
+    script = button_actions[[k for k,v in butt.value._asdict().items() if v == 1][0]]
     if args.verbosity > 1:
         print(f"press {butt.value}")
         print(tuple(butt.value))
