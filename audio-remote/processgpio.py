@@ -2,6 +2,7 @@
 import os
 import tomllib
 import subprocess
+from time import sleep
 from pathlib import Path
 from gpiozero import Button, PWMLED, Device,ButtonBoard
 from gpiozero.pins.pigpio import PiGPIOFactory
@@ -46,6 +47,13 @@ class RotaryEncoder():
             counter = 0
         self.display_choice(counter)
         self.play_choice(counter)
+
+    def sw_long(self):
+        self.display.draw_text("clear display")
+        sleep(1)
+        self.display.device.hide()
+        
+
 
     def display_choice(self, counter):
         #global runtime
@@ -132,7 +140,10 @@ def main():
                            up_callback=rt.up_callback,
                            down_callback=rt.down_callback)           
                                                                           
-    rt.rotary.setup_switch(debounce=200,sw_short_callback=rt.sw_short)
+    rt.rotary.setup_switch(debounce=200,
+                           long_press=True,
+                           sw_short_callback=rt.sw_short,
+                           sw_long_callback=rt.sw_long)
     pause()
 
 
