@@ -2,17 +2,12 @@
 # -*- mode: python; coding: utf-8 -*-
 import logging
 from time import time
-import tomllib
-import argparse, textwrap
-import os
 from datetime import timedelta
-from pathlib import Path
 from json import dumps as to_json
 from sys import stderr
 from collections import OrderedDict
 from lms import Server, __version__
 from re import match
-from argparse import ArgumentParser
 
 TIMEOUT = timedelta(seconds=5)
 
@@ -63,9 +58,10 @@ class LMServer(Server):
 
 
 class LMPlayer():
-    def __init__(self, player):
+    def __init__(self, player, verbose=False):
         self.player = player
         self.server = player._server
+        self.verbose = verbose
         self.PATH_ON_HOST = "/data/music/music_data"
         self.PATH_IN_DOCKER = "/music"
 
@@ -83,12 +79,17 @@ class LMPlayer():
                 f"\n{self.player.position_pct}: {self.player.position} / {self.player.duration}"
                 f"\nstatus: {status}")
 
+    def vprint(self,text):
+        if self.verbose:
+            print(text)
+        
+
     def parse_track(self, track):
         if track.startswith(self.PATH_ON_HOST):
-            #print('is file')
+            self.vprint('is file')
             return  f"file://{track.replace(self.PATH_ON_HOST,self.PATH_IN_DOCKER)}"
         elif track.startswith('http'):
-            #print('is_url')
+            self.vprint('is_url')
             return track
         else:
             print(f"whats going on with {track}?")
@@ -97,6 +98,7 @@ class LMPlayer():
         track_list = []
         for track in tracks:
             track_uri = self.parse_track(track)
+            self.vprint(track_uri)
             track_list.append(track_uri)
         return track_list     
     
@@ -112,15 +114,16 @@ class LMPlayer():
 
     def play(self, tracks):
         track_list = None
-        self.show('play',track_list)
-
+        self.show('play',tracks)
+        
         if tracks:
             track_list = self.build_tracks(tracks)
+            self.vprint(track_list)
             if len(tracks) > 1:
                 self.player.enqueue_uri(track_list)
                 self.player.play()
             else:
-                self.player.play_uri(track_list)
+                self.player.play_uri(track_list[0])
         else:
             self.player.play()
 
@@ -177,47 +180,3 @@ class LMPlayer():
         self.player.query('sleep', 0)
         
                 
-def main():
-    with open(os.path.join(Path.home(),".config","niche-audio","config.toml"), mode="rb") as fp:
-        settings = tomllib.load(fp)
-    server_id = settings.get('general',{}).get('server')
-    player_id = settings['general']['player']
-    parser = ArgumentParser(description="Interact with Logitech Media Server",
-        formatter_class=argparse.RawTextHelpFormatter)
-    parser.add_argument('cmd', help=textwrap.dedent('''\
-                status : show players and their status
-                info   : show player info
-                play   : without argument start player
-                play <tracks> : play files or urls
-                add <tracks>  : add files to end of playlist
-                insert <tracks>: play files next
-                pause  : pause the player
-                prev   : previous track
-                next   : next track
-                shuffle: shuffle tracks
-                unshuffle    : unshuffle tracks
-                toggle_shuffle : toggle shuffle state
-                sleep  : set/add sleeptime <min> default 30min
-                random : play random album
-                show   : show test string'''))
-    parser.add_argument("-v", "--verbose", action='count', default=0,
-                    help="increase output verbosity")
-    parser.add_argument("-s", "--server", dest="server", default=server_id)
-    parser.add_argument("-p", "--player", dest="player", default=player_id)
-    parser.add_argument("tracks", nargs="*", help='files or url')
-    args = parser.parse_args()
-    server = LMServer(host=server_id)
-    server.update()
-    my_player = LMPlayer(server.get_player(player_id))
-    if args.verbose:
-        print(my_player)
-        print(args.cmd)
-        print(args.tracks)
-
-    if args.cmd == 'info':
-        print(my_player)
-    else:
-        getattr(my_player, args.cmd)(args.tracks)
-
-if __name__ == '__main__':
-   main()
